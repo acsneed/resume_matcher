@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Matcher</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --line: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22d3ee;
+      --accent2: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1000px 420px at 10% -10%, rgba(34, 211, 238, 0.16), transparent 55%),
+        radial-gradient(900px 380px at 90% -10%, rgba(167, 139, 250, 0.14), transparent 45%),
+        var(--bg);
+    }
+    .wrap { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    .card {
+      background: rgba(17, 24, 39, 0.88);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    h1, h2, h3 { margin: 0.3rem 0 0.6rem; }
+    p { color: var(--muted); margin-top: 0; }
+    label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
+    textarea, input[type="file"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0.7rem;
+    }
+    textarea { min-height: 220px; resize: vertical; }
+    button {
+      margin-top: 0.8rem;
+      border: 0;
+      border-radius: 10px;
+      padding: 0.65rem 1rem;
+      font-weight: 700;
+      color: #0f172a;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      cursor: pointer;
+    }
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 0.8rem; }
+    .chips { list-style: none; padding: 0; margin: 0.4rem 0 0; display: grid; gap: 0.4rem; }
+    .chips li {
+      border: 1px solid var(--line);
+      background: #172033;
+      border-radius: 999px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.9rem;
+    }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 0.7rem; margin-top: 0.5rem; }
+    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem; background: #10192a; }
+    .stat small { color: var(--muted); }
+    .stat .num { font-size: 1.25rem; font-weight: 700; margin-top: 0.2rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid var(--line); padding: 0.55rem; vertical-align: top; }
+    th { background: #162133; text-align: left; }
+    .error { color: #fecaca; background: rgba(127, 29, 29, 0.3); border: 1px solid rgba(239, 68, 68, 0.45); border-radius: 10px; padding: 0.7rem; margin: 0.8rem 0; }
+    .hidden { display: none; }
+    @media (max-width: 860px) {
+      .grid3 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Resume Matcher</h1>
+      <p>Upload a PDF resume and paste a job description to identify matched skills, missing skills, missing keywords, and missing qualifications.</p>
+    </div>
+
+    <div class="card">
+      <label for="resumeFile">Resume PDF</label>
+      <input id="resumeFile" type="file" accept=".pdf" />
+
+      <div style="height:0.8rem;"></div>
+      <label for="jobDescription">Job Description</label>
+      <textarea id="jobDescription" placeholder="Paste the full job description here..."></textarea>
+
+      <button id="analyzeBtn">Analyze Resume</button>
+      <div id="errorBox" class="error hidden"></div>
+    </div>
+
+    <div id="resultsCard" class="card hidden">
+      <h2>Analysis Results</h2>
+      <div class="stats">
+        <div class="stat"><small>Matched Skills</small><div class="num" id="matchedCount">0</div></div>
+        <div class="stat"><small>Missing Skills</small><div class="num" id="missingSkillsCount">0</div></div>
+        <div class="stat"><small>Missing Keywords</small><div class="num" id="missingKeywordsCount">0</div></div>
+        <div class="stat"><small>Missing Qualifications</small><div class="num" id="missingQualsCount">0</div></div>
+      </div>
+
+      <div style="height:0.8rem;"></div>
+      <div class="grid3">
+        <div>
+          <h3>Matched Skills</h3>
+          <ul id="matchedSkillsList" class="chips"></ul>
+        </div>
+        <div>
+          <h3>Missing Skills</h3>
+          <ul id="missingSkillsList" class="chips"></ul>
+        </div>
+        <div>
+          <h3>Optimization Tips</h3>
+          <ul id="tipsList" class="chips"></ul>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Missing Skills</th>
+            <th>Missing Keywords</th>
+            <th>Missing Qualifications</th>
+          </tr>
+        </thead>
+        <tbody id="resultsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.min.mjs";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.mjs";
+
+    const SKILLS = [
+      "python", "java", "javascript", "typescript", "sql", "aws", "azure", "gcp", "docker",
+      "kubernetes", "flask", "django", "react", "node", "tensorflow", "pytorch", "tableau",
+      "power bi", "excel", "spark", "hadoop", "git", "rest api", "api", "streamlit", "nlp",
+      "machine learning", "deep learning", "data analysis", "data visualization", "agile",
+      "scrum", "ci/cd", "linux", "mongodb", "postgresql", "communication", "leadership",
+      "project management", "statistics"
+    ];
+
+    const QUALIFICATIONS = [
+      "bachelor", "master", "phd", "degree", "certification", "certified", "years of experience",
+      "experience", "portfolio", "clearance", "license"
+    ];
+
+    const STOPWORDS = new Set([
+      "the","a","an","and","or","to","of","in","for","on","with","is","are","as","by","at","from",
+      "that","this","it","be","will","your","you","we","our","their","they","has","have","had"
+    ]);
+
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const errorBox = document.getElementById("errorBox");
+    const resultsCard = document.getElementById("resultsCard");
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.remove("hidden");
+    }
+    function clearError() {
+      errorBox.textContent = "";
+      errorBox.classList.add("hidden");
+    }
+    function uniq(arr) {
+      return [...new Set(arr.map((s) => s.trim()).filter(Boolean))];
+    }
+    function containsPhrase(text, phrase) {
+      return text.includes(phrase.toLowerCase());
+    }
+    function topKeywords(text, limit = 30) {
+      const words = (text.toLowerCase().match(/[a-z][a-z0-9.+-]*/g) || [])
+        .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+      const counts = {};
+      for (const w of words) counts[w] = (counts[w] || 0) + 1;
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([w]) => w);
+    }
+    function scrubPII(text) {
+      return text
+        .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[REDACTED_EMAIL]")
+        .replace(/(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}\b/g, "[REDACTED_PHONE]");
+    }
+
+    async function extractPdfText(file) {
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      const chunks = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        chunks.push(content.items.map((it) => it.str).join(" "));
+      }
+      return chunks.join("\n");
+    }
+
+    function analyze(resumeTextRaw, jdRaw) {
+      const resumeText = scrubPII(resumeTextRaw.toLowerCase());
+      const jdText = jdRaw.toLowerCase();
+
+      const matchedSkills = [];
+      const missingSkills = [];
+      for (const skill of SKILLS) {
+        const inJD = containsPhrase(jdText, skill);
+        const inResume = containsPhrase(resumeText, skill);
+        if (inJD && inResume) matchedSkills.push(skill);
+        if (inJD && !inResume) missingSkills.push(skill);
+      }
+
+      const missingQualifications = QUALIFICATIONS
+        .filter((q) => containsPhrase(jdText, q) && !containsPhrase(resumeText, q));
+
+      const jdTop = topKeywords(jdText, 35);
+      const missingKeywords = jdTop
+        .filter((kw) => !containsPhrase(resumeText, kw))
+        .slice(0, 15);
+
+      const tips = uniq([
+        missingSkills.length ? `Add project bullets showing ${missingSkills.slice(0, 3).join(", ")}.` : "",
+        missingKeywords.length ? `Include role keywords naturally: ${missingKeywords.slice(0, 5).join(", ")}.` : "",
+        missingQualifications.length ? `Address qualification gaps or equivalent experience for: ${missingQualifications.slice(0, 2).join(", ")}.` : "",
+        "Mirror the job description phrasing in your skills and experience sections.",
+        "Quantify achievements with impact metrics (%, $, time saved, growth)."
+      ]).slice(0, 5);
+
+      return {
+        matchedSkills: uniq(matchedSkills),
+        missingSkills: uniq(missingSkills),
+        missingKeywords: uniq(missingKeywords),
+        missingQualifications: uniq(missingQualifications),
+        optimizationTips: tips
+      };
+    }
+
+    function fillList(el, items, emptyMsg) {
+      el.innerHTML = "";
+      const list = items.length ? items : [emptyMsg];
+      for (const item of list) {
+        const li = document.createElement("li");
+        li.textContent = item;
+        el.appendChild(li);
+      }
+    }
+
+    function render(result) {
+      document.getElementById("matchedCount").textContent = result.matchedSkills.length;
+      document.getElementById("missingSkillsCount").textContent = result.missingSkills.length;
+      document.getElementById("missingKeywordsCount").textContent = result.missingKeywords.length;
+      document.getElementById("missingQualsCount").textContent = result.missingQualifications.length;
+
+      fillList(document.getElementById("matchedSkillsList"), result.matchedSkills, "No direct skill matches detected.");
+      fillList(document.getElementById("missingSkillsList"), result.missingSkills, "No missing skills detected.");
+      fillList(document.getElementById("tipsList"), result.optimizationTips, "No tips generated.");
+
+      const maxLen = Math.max(result.missingSkills.length, result.missingKeywords.length, result.missingQualifications.length, 1);
+      const tbody = document.getElementById("resultsTableBody");
+      tbody.innerHTML = "";
+      for (let i = 0; i < maxLen; i++) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${result.missingSkills[i] || ""}</td>
+          <td>${result.missingKeywords[i] || ""}</td>
+          <td>${result.missingQualifications[i] || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+      resultsCard.classList.remove("hidden");
+    }
+
+    analyzeBtn.addEventListener("click", async () => {
+      clearError();
+      resultsCard.classList.add("hidden");
+
+      const file = document.getElementById("resumeFile").files[0];
+      const jd = document.getElementById("jobDescription").value.trim();
+      if (!file) return showError("Please upload a PDF resume.");
+      if (!jd) return showError("Please paste a job description.");
+      if (!file.name.toLowerCase().endsWith(".pdf")) return showError("Resume must be a .pdf file.");
+
+      try {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = "Analyzing...";
+        const resumeText = await extractPdfText(file);
+        if (!resumeText.trim()) return showError("Could not extract readable text from this PDF.");
+        const result = analyze(resumeText, jd);
+        render(result);
+      } catch (err) {
+        showError(`Analysis failed: ${err.message || err}`);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = "Analyze Resume";
+      }
+    });
+  </script>
+</body>
+</html>
