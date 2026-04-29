@@ -72,6 +72,44 @@
     th { background: #162133; text-align: left; }
     .error { color: #fecaca; background: rgba(127, 29, 29, 0.3); border: 1px solid rgba(239, 68, 68, 0.45); border-radius: 10px; padding: 0.7rem; margin: 0.8rem 0; }
     .hidden { display: none; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .tab {
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #0b1220;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .tab.active {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #0f172a;
+      border-color: transparent;
+    }
+    .tabpanel { display: none; }
+    .tabpanel.active { display: block; }
+    .lp-skill {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.85rem;
+      margin-bottom: 0.75rem;
+      background: #10192a;
+    }
+    .lp-skill h4 { margin: 0 0 0.5rem; text-transform: capitalize; font-size: 1rem; }
+    .lp-block { margin-top: 0.5rem; }
+    .lp-block strong { color: var(--accent); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .lp-list { margin: 0.35rem 0 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.9rem; }
+    .lp-list a { color: var(--accent); }
+    .lp-phase {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-left: 3px solid var(--accent2);
+      background: rgba(167, 139, 250, 0.08);
+      border-radius: 0 10px 10px 0;
+    }
+    .lp-phase h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
     @media (max-width: 860px) {
       .grid3 { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr 1fr; }
@@ -98,40 +136,53 @@
     </div>
 
     <div id="resultsCard" class="card hidden">
-      <h2>Analysis Results</h2>
-      <div class="stats">
-        <div class="stat"><small>Matched Skills</small><div class="num" id="matchedCount">0</div></div>
-        <div class="stat"><small>Missing Skills</small><div class="num" id="missingSkillsCount">0</div></div>
-        <div class="stat"><small>Missing Keywords</small><div class="num" id="missingKeywordsCount">0</div></div>
-        <div class="stat"><small>Missing Qualifications</small><div class="num" id="missingQualsCount">0</div></div>
+      <h2 style="margin-bottom:0.5rem;">Results</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="analysis" role="tab" aria-selected="true">Analysis</button>
+        <button type="button" class="tab" data-tab="learning" role="tab" aria-selected="false">Learning Path</button>
       </div>
 
-      <div style="height:0.8rem;"></div>
-      <div class="grid3">
-        <div>
-          <h3>Matched Skills</h3>
-          <ul id="matchedSkillsList" class="chips"></ul>
+      <div id="panel-analysis" class="tabpanel active" role="tabpanel">
+        <div class="stats">
+          <div class="stat"><small>Matched Skills</small><div class="num" id="matchedCount">0</div></div>
+          <div class="stat"><small>Missing Skills</small><div class="num" id="missingSkillsCount">0</div></div>
+          <div class="stat"><small>Missing Keywords</small><div class="num" id="missingKeywordsCount">0</div></div>
+          <div class="stat"><small>Missing Qualifications</small><div class="num" id="missingQualsCount">0</div></div>
         </div>
-        <div>
-          <h3>Missing Skills</h3>
-          <ul id="missingSkillsList" class="chips"></ul>
+
+        <div style="height:0.8rem;"></div>
+        <div class="grid3">
+          <div>
+            <h3>Matched Skills</h3>
+            <ul id="matchedSkillsList" class="chips"></ul>
+          </div>
+          <div>
+            <h3>Missing Skills</h3>
+            <ul id="missingSkillsList" class="chips"></ul>
+          </div>
+          <div>
+            <h3>Optimization Tips</h3>
+            <ul id="tipsList" class="chips"></ul>
+          </div>
         </div>
-        <div>
-          <h3>Optimization Tips</h3>
-          <ul id="tipsList" class="chips"></ul>
-        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Missing Skills</th>
+              <th>Missing Keywords</th>
+              <th>Missing Qualifications</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody"></tbody>
+        </table>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Missing Skills</th>
-            <th>Missing Keywords</th>
-            <th>Missing Qualifications</th>
-          </tr>
-        </thead>
-        <tbody id="resultsTableBody"></tbody>
-      </table>
+      <div id="panel-learning" class="tabpanel" role="tabpanel">
+        <p>Suggested courses and certifications based on your <strong>missing skills</strong> and top <strong>missing keywords</strong>. This site runs in your browser only, so paths are curated recommendations you can verify on each provider.</p>
+        <div id="learningPathEmpty" class="error hidden">Run <strong>Analyze Resume</strong> on the Analysis tab first, then return here for a learning path.</div>
+        <div id="learningPathContent"></div>
+      </div>
     </div>
   </div>
 
@@ -158,6 +209,184 @@
       "the","a","an","and","or","to","of","in","for","on","with","is","are","as","by","at","from",
       "that","this","it","be","will","your","you","we","our","their","they","has","have","had"
     ]);
+
+    /** Curated learning resources keyed by the same strings used in SKILLS (browser-only; no API). */
+    const LEARNING_PATHS = {
+      python: {
+        courses: [
+          { title: "Python for Everybody", provider: "Coursera", href: "https://www.coursera.org/specializations/python" },
+          { title: "Introduction to Computer Science and Programming Using Python", provider: "MIT OCW", href: "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/" }
+        ],
+        certs: [{ title: "PCAP – Certified Associate in Python Programming", provider: "Python Institute", href: "https://pythoninstitute.org/certification" }]
+      },
+      java: {
+        courses: [
+          { title: "Java Programming and Software Engineering Fundamentals", provider: "Coursera", href: "https://www.coursera.org/specializations/java-programming" },
+          { title: "Object Oriented Programming in Java", provider: "Coursera", href: "https://www.coursera.org/specializations/object-oriented-programming" }
+        ],
+        certs: [{ title: "Oracle Certified Professional: Java SE", provider: "Oracle", href: "https://education.oracle.com/java-certification" }]
+      },
+      javascript: {
+        courses: [
+          { title: "JavaScript Algorithms and Data Structures", provider: "freeCodeCamp", href: "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures/" },
+          { title: "The Complete JavaScript Course (search)", provider: "Udemy", href: "https://www.udemy.com/courses/search/?q=javascript" }
+        ],
+        certs: [{ title: "OpenJS Node.js Application Developer (JS ecosystem)", provider: "Linux Foundation", href: "https://training.linuxfoundation.org/certification-catalog/" }]
+      },
+      typescript: {
+        courses: [{ title: "Understanding TypeScript", provider: "Udemy (search)", href: "https://www.udemy.com/courses/search/?q=typescript" }],
+        certs: [{ title: "Microsoft Certified: Azure Developer Associate (includes TS)", provider: "Microsoft Learn", href: "https://learn.microsoft.com/en-us/credentials/certifications/azure-developer/" }]
+      },
+      sql: {
+        courses: [
+          { title: "SQL for Data Science", provider: "Coursera", href: "https://www.coursera.org/learn/sql-for-data-science" },
+          { title: "Introduction to SQL", provider: "Khan Academy", href: "https://www.khanacademy.org/computing/computer-programming/sql" }
+        ],
+        certs: [{ title: "Oracle Database SQL Certified Associate", provider: "Oracle", href: "https://education.oracle.com/oracle-database-sql-certified-associate/trackp_457" }]
+      },
+      aws: {
+        courses: [{ title: "AWS Cloud Practitioner Essentials", provider: "AWS Skill Builder", href: "https://explore.skillbuilder.aws/learn" }],
+        certs: [{ title: "AWS Certified Cloud Practitioner", provider: "AWS", href: "https://aws.amazon.com/certification/certified-cloud-practitioner/" }]
+      },
+      azure: {
+        courses: [{ title: "Microsoft Azure Fundamentals (AZ-900)", provider: "Microsoft Learn", href: "https://learn.microsoft.com/en-us/training/paths/azure-fundamentals/" }],
+        certs: [{ title: "Microsoft Certified: Azure Fundamentals", provider: "Microsoft", href: "https://learn.microsoft.com/en-us/credentials/certifications/azure-fundamentals/" }]
+      },
+      gcp: {
+        courses: [{ title: "Google Cloud Fundamentals", provider: "Google Cloud Skills Boost", href: "https://www.cloudskillsboost.google/" }],
+        certs: [{ title: "Google Cloud Digital Leader", provider: "Google Cloud", href: "https://cloud.google.com/learn/certification/cloud-digital-leader" }]
+      },
+      docker: {
+        courses: [{ title: "Containers on AWS / Docker basics (search)", provider: "Coursera", href: "https://www.coursera.org/search?query=docker" }],
+        certs: [{ title: "Docker Certified Associate (DCA)", provider: "Docker", href: "https://www.docker.com/certification/" }]
+      },
+      kubernetes: {
+        courses: [{ title: "Introduction to Kubernetes", provider: "edX / Linux Foundation", href: "https://www.edx.org/learn/kubernetes" }],
+        certs: [{ title: "Certified Kubernetes Administrator (CKA)", provider: "CNCF / Linux Foundation", href: "https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/" }]
+      },
+      flask: {
+        courses: [{ title: "REST APIs with Flask and Python", provider: "Udemy (search)", href: "https://www.udemy.com/courses/search/?q=flask+python" }],
+        certs: []
+      },
+      django: {
+        courses: [{ title: "Django for Everybody", provider: "Coursera", href: "https://www.coursera.org/specializations/django" }],
+        certs: []
+      },
+      react: {
+        courses: [{ title: "Full-Stack Web Development with React", provider: "Coursera", href: "https://www.coursera.org/specializations/full-stack-react" }],
+        certs: []
+      },
+      node: {
+        courses: [{ title: "Server-side Development with NodeJS", provider: "Coursera", href: "https://www.coursera.org/learn/server-side-nodejs" }],
+        certs: [{ title: "OpenJS Node.js Application Developer", provider: "Linux Foundation", href: "https://training.linuxfoundation.org/certification/nodejs-application-developer/" }]
+      },
+      tensorflow: {
+        courses: [{ title: "DeepLearning.AI TensorFlow Developer", provider: "Coursera", href: "https://www.coursera.org/professional-certificates/tensorflow-in-practice" }],
+        certs: []
+      },
+      pytorch: {
+        courses: [{ title: "PyTorch for Deep Learning", provider: "Udacity / search", href: "https://www.udacity.com/course/deep-learning-pytorch--ud188" }],
+        certs: []
+      },
+      tableau: {
+        courses: [{ title: "Data Visualization with Tableau", provider: "Coursera", href: "https://www.coursera.org/learn/data-visualization-tableau" }],
+        certs: [{ title: "Tableau Desktop Specialist", provider: "Tableau", href: "https://www.tableau.com/learn/certification" }]
+      },
+      "power bi": {
+        courses: [{ title: "Excel Skills for Business (related analytics)", provider: "Coursera", href: "https://www.coursera.org/specializations/excel" }],
+        certs: [{ title: "Microsoft Certified: Power BI Data Analyst Associate", provider: "Microsoft Learn", href: "https://learn.microsoft.com/en-us/credentials/certifications/power-bi-data-analyst-associate/" }]
+      },
+      excel: {
+        courses: [{ title: "Excel Skills for Business", provider: "Coursera", href: "https://www.coursera.org/specializations/excel" }],
+        certs: [{ title: "Microsoft Office Specialist: Excel", provider: "Microsoft", href: "https://learn.microsoft.com/en-us/credentials/certifications/mos-excel-2019/" }]
+      },
+      spark: {
+        courses: [{ title: "Big Data Analysis with Scala and Spark", provider: "Coursera", href: "https://www.coursera.org/learn/scala-spark-big-data" }],
+        certs: [{ title: "Databricks Certified Associate Developer for Apache Spark", provider: "Databricks", href: "https://www.databricks.com/learn/certification" }]
+      },
+      hadoop: {
+        courses: [{ title: "Hadoop Platform and Application Framework", provider: "Coursera", href: "https://www.coursera.org/learn/hadoop" }],
+        certs: [{ title: "Cloudera Data Platform (CDP) certifications", provider: "Cloudera", href: "https://www.cloudera.com/about/training/certification.html" }]
+      },
+      git: {
+        courses: [{ title: "Version Control with Git", provider: "Coursera", href: "https://www.coursera.org/learn/version-control-with-git" }],
+        certs: []
+      },
+      "rest api": {
+        courses: [{ title: "RESTful API design (search)", provider: "Coursera", href: "https://www.coursera.org/search?query=rest+api" }],
+        certs: []
+      },
+      api: {
+        courses: [{ title: "APIs microservices (search)", provider: "Coursera", href: "https://www.coursera.org/search?query=api+development" }],
+        certs: []
+      },
+      streamlit: {
+        courses: [{ title: "Build data apps with Streamlit (docs + tutorials)", provider: "Streamlit", href: "https://docs.streamlit.io/" }],
+        certs: []
+      },
+      nlp: {
+        courses: [{ title: "Natural Language Processing", provider: "Coursera", href: "https://www.coursera.org/specializations/natural-language-processing" }],
+        certs: []
+      },
+      "machine learning": {
+        courses: [{ title: "Machine Learning", provider: "Coursera (Stanford)", href: "https://www.coursera.org/specializations/machine-learning-introduction" }],
+        certs: []
+      },
+      "deep learning": {
+        courses: [{ title: "Deep Learning Specialization", provider: "Coursera", href: "https://www.coursera.org/specializations/deep-learning" }],
+        certs: []
+      },
+      "data analysis": {
+        courses: [{ title: "Google Data Analytics Certificate", provider: "Coursera", href: "https://www.coursera.org/professional-certificates/google-data-analytics" }],
+        certs: []
+      },
+      "data visualization": {
+        courses: [{ title: "Data Visualization with Tableau / Python", provider: "Coursera", href: "https://www.coursera.org/search?query=data+visualization" }],
+        certs: []
+      },
+      agile: {
+        courses: [{ title: "Agile with Atlassian Jira", provider: "Coursera", href: "https://www.coursera.org/learn/agile-atlassian-jira" }],
+        certs: [{ title: "Professional Scrum Master I (PSM I)", provider: "Scrum.org", href: "https://www.scrum.org/assessments/professional-scrum-master-i-certification" }]
+      },
+      scrum: {
+        courses: [{ title: "Scrum Basics (search)", provider: "Coursera", href: "https://www.coursera.org/search?query=scrum" }],
+        certs: [{ title: "Certified ScrumMaster (CSM)", provider: "Scrum Alliance", href: "https://www.scrumalliance.org/get-certified" }]
+      },
+      "ci/cd": {
+        courses: [{ title: "Continuous Integration and Continuous Delivery", provider: "Coursera", href: "https://www.coursera.org/learn/continuous-integration-and-continuous-delivery" }],
+        certs: [{ title: "GitLab Certified Associate", provider: "GitLab", href: "https://about.gitlab.com/services/training/certification/" }]
+      },
+      linux: {
+        courses: [{ title: "Linux Basics for Hackers / sysadmin (search)", provider: "Coursera", href: "https://www.coursera.org/search?query=linux" }],
+        certs: [{ title: "LPIC-1 / Linux+", provider: "LPI / CompTIA", href: "https://www.lpi.org/our-certifications/lpic-1-overview" }]
+      },
+      mongodb: {
+        courses: [{ title: "MongoDB University (free courses)", provider: "MongoDB", href: "https://learn.mongodb.com/" }],
+        certs: [{ title: "MongoDB Associate Developer", provider: "MongoDB", href: "https://learn.mongodb.com/pages/certification" }]
+      },
+      postgresql: {
+        courses: [{ title: "PostgreSQL for Everybody", provider: "Coursera", href: "https://www.coursera.org/specializations/postgresql-for-everybody" }],
+        certs: []
+      },
+      communication: {
+        courses: [{ title: "Improving Communication Skills", provider: "Coursera", href: "https://www.coursera.org/learn/wharton-communication" }],
+        certs: []
+      },
+      leadership: {
+        courses: [{ title: "Inspirational Leadership", provider: "Coursera", href: "https://www.coursera.org/learn/inspirational-leadership" }],
+        certs: []
+      },
+      "project management": {
+        courses: [{ title: "Google Project Management Certificate", provider: "Coursera", href: "https://www.coursera.org/professional-certificates/google-project-management" }],
+        certs: [{ title: "CAPM or PMP (PMI)", provider: "PMI", href: "https://www.pmi.org/certifications" }]
+      },
+      statistics: {
+        courses: [{ title: "Basic Statistics", provider: "Coursera", href: "https://www.coursera.org/learn/basic-statistics" }],
+        certs: []
+      }
+    };
+
+    let lastAnalysisResult = null;
 
     const analyzeBtn = document.getElementById("analyzeBtn");
     const errorBox = document.getElementById("errorBox");
@@ -253,7 +482,105 @@
       }
     }
 
+    function escapeHtml(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function fallbackLearning(topic) {
+      const q = encodeURIComponent(topic);
+      return {
+        courses: [
+          { title: `Search courses: ${topic}`, provider: "Coursera", href: `https://www.coursera.org/search?query=${q}` },
+          { title: `Video tutorials: ${topic}`, provider: "YouTube", href: `https://www.youtube.com/results?search_query=${encodeURIComponent(topic + " full course")}` }
+        ],
+        certs: [
+          { title: `Search certifications: ${topic}`, provider: "Web", href: `https://www.google.com/search?q=${encodeURIComponent(topic + " certification")}` }
+        ]
+      };
+    }
+
+    function getPathForTopic(topic) {
+      const key = topic.toLowerCase().trim();
+      if (LEARNING_PATHS[key]) return LEARNING_PATHS[key];
+      for (const skill of SKILLS) {
+        if (key.includes(skill) || skill.includes(key)) {
+          if (LEARNING_PATHS[skill]) return LEARNING_PATHS[skill];
+        }
+      }
+      return fallbackLearning(topic);
+    }
+
+    function renderLearningPath() {
+      const emptyEl = document.getElementById("learningPathEmpty");
+      const contentEl = document.getElementById("learningPathContent");
+      if (!lastAnalysisResult) {
+        emptyEl.classList.remove("hidden");
+        contentEl.innerHTML = "";
+        return;
+      }
+      emptyEl.classList.add("hidden");
+
+      const topics = uniq([
+        ...lastAnalysisResult.missingSkills,
+        ...lastAnalysisResult.missingKeywords.slice(0, 8)
+      ]);
+
+      if (!topics.length) {
+        contentEl.innerHTML = "<p class=\"muted\">No gaps detected — try a job description with clearer skill terms, or broaden keywords in the posting.</p>";
+        return;
+      }
+
+      const phase1 = topics.slice(0, Math.ceil(topics.length / 2));
+      const phase2 = topics.slice(Math.ceil(topics.length / 2));
+
+      function phaseHtml(title, list) {
+        if (!list.length) return "";
+        let blocks = "";
+        for (const topic of list) {
+          const path = getPathForTopic(topic);
+          const courses = (path.courses && path.courses.length ? path.courses : fallbackLearning(topic).courses)
+            .slice(0, 2)
+            .map((c) => `<li><a href="${escapeHtml(c.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.title)}</a> — ${escapeHtml(c.provider)}</li>`)
+            .join("");
+          const certs = (path.certs && path.certs.length ? path.certs : fallbackLearning(topic).certs)
+            .slice(0, 2)
+            .map((c) => `<li><a href="${escapeHtml(c.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.title)}</a> — ${escapeHtml(c.provider)}</li>`)
+            .join("");
+          blocks += `
+            <div class="lp-skill">
+              <h4>${escapeHtml(topic)}</h4>
+              <div class="lp-block"><strong>Courses</strong><ul class="lp-list">${courses}</ul></div>
+              <div class="lp-block"><strong>Certifications</strong><ul class="lp-list">${certs || "<li>Search vendor-neutral certs for this topic using the link above.</li>"}</ul></div>
+            </div>`;
+        }
+        return `<div class="lp-phase"><h3>${escapeHtml(title)}</h3>${blocks}</div>`;
+      }
+
+      contentEl.innerHTML =
+        phaseHtml("Phase 1 — Foundations", phase1) +
+        phaseHtml("Phase 2 — Depth & proof", phase2);
+    }
+
+    function setTab(name) {
+      document.querySelectorAll(".tab").forEach((btn) => {
+        const on = btn.dataset.tab === name;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.querySelectorAll(".tabpanel").forEach((p) => {
+        p.classList.toggle("active", p.id === `panel-${name}`);
+      });
+      if (name === "learning") renderLearningPath();
+    }
+
+    document.querySelectorAll(".tab").forEach((btn) => {
+      btn.addEventListener("click", () => setTab(btn.dataset.tab));
+    });
+
     function render(result) {
+      lastAnalysisResult = result;
       document.getElementById("matchedCount").textContent = result.matchedSkills.length;
       document.getElementById("missingSkillsCount").textContent = result.missingSkills.length;
       document.getElementById("missingKeywordsCount").textContent = result.missingKeywords.length;
@@ -275,7 +602,9 @@
         `;
         tbody.appendChild(tr);
       }
+      setTab("analysis");
       resultsCard.classList.remove("hidden");
+      renderLearningPath();
     }
 
     analyzeBtn.addEventListener("click", async () => {
