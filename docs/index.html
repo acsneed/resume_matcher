@@ -193,13 +193,115 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.mjs";
 
     const SKILLS = [
-      "python", "java", "javascript", "typescript", "sql", "aws", "azure", "gcp", "docker",
-      "kubernetes", "flask", "django", "react", "node", "tensorflow", "pytorch", "tableau",
-      "power bi", "excel", "spark", "hadoop", "git", "rest api", "api", "streamlit", "nlp",
-      "machine learning", "deep learning", "data analysis", "data visualization", "agile",
-      "scrum", "ci/cd", "linux", "mongodb", "postgresql", "communication", "leadership",
-      "project management", "statistics"
+      "python", "java", "scala", "javascript", "typescript", "sql", "nosql", "aws", "azure", "gcp",
+      "docker", "kubernetes", "helm", "terraform", "ansible", "jenkins", "ci/cd", "github actions",
+      "flask", "django", "fastapi", "spring", "react", "angular", "vue", "node", "nodejs", "next.js",
+      "graphql", "rest api", "api", "microservices", "kafka", "apache kafka", "confluent", "rabbitmq",
+      "apache airflow", "airflow", "dbt", "snowflake", "amazon redshift", "redshift", "bigquery",
+      "databricks", "spark", "apache spark", "pyspark", "hadoop", "hive", "presto", "trino",
+      "elasticsearch", "splunk", "prometheus", "grafana", "nginx", "linux", "unix", "bash",
+      "tensorflow", "pytorch", "keras", "scikit-learn", "pandas", "numpy", "jupyter", "tableau",
+      "power bi", "excel", "git", "gitlab", "streamlit", "nlp", "machine learning", "deep learning",
+      "computer vision", "generative ai", "llm", "rag", "data engineering", "data pipeline", "etl", "elt",
+      "data analysis", "data visualization", "data warehousing", "data modeling", "mongodb", "postgresql",
+      "mysql", "redis", "dynamodb", "cassandra", "s3", "lambda", "ec2", "vpc", "iam", "sns", "sqs",
+      "kinesis", "glue", "emr", "agile", "scrum", "kanban", "jira", "confluence",
+      "communication", "leadership", "project management", "statistics", "a/b testing", "oauth", "saml"
     ];
+
+    /** Map common JD shorthand to phrases we already detect in SKILLS (longer keys first). */
+    const SKILL_ALIASES = [
+      ["apache kafka", "kafka"],
+      ["amazon web services", "aws"],
+      ["google cloud platform", "gcp"],
+      ["microsoft azure", "azure"],
+      ["k8s", "kubernetes"],
+      ["eks", "aws"],
+      ["gke", "gcp"],
+      ["aks", "azure"],
+      ["postgres", "postgresql"],
+      ["mongo", "mongodb"],
+      ["ms sql", "sql"],
+      ["t-sql", "sql"],
+      ["node.js", "nodejs"],
+      ["nextjs", "next.js"],
+      ["ci cd", "ci/cd"]
+    ];
+
+    const EXTRA_TECH_KEYWORDS = [
+      "kafka", "airflow", "snowflake", "redshift", "bigquery", "terraform", "ansible", "jenkins",
+      "helm", "grafana", "prometheus", "splunk", "elasticsearch", "kibana", "datadog", "newrelic",
+      "nginx", "haproxy", "traefik", "istio", "linkerd", "vault", "consul", "nomad", "packer",
+      "circleci", "travis", "argocd", "flux", "tekton", "spinnaker", "maven", "gradle", "ant",
+      "sbt", "npm", "yarn", "webpack", "vite", "rollup", "babel", "eslint", "prettier", "jest",
+      "mocha", "cypress", "playwright", "selenium", "pytest", "junit", "mockito", "swagger", "openapi",
+      "protobuf", "grpc", "websockets", "oauth2", "openid", "jwt", "ldap", "kerberos", "mtls",
+      "hbase", "couchbase", "neo4j", "influxdb", "timescaledb", "clickhouse", "duckdb", "sqlite",
+      "oracle", "db2", "ssis", "ssrs", "ssas", "powerbi", "looker", "mode", "hex", "sigma",
+      "segment", "rudderstack", "fivetran", "stitch", "matillion", "talend", "informatica",
+      "pentaho", "pulsar", "nats", "zeromq", "activemq", "sqs", "sns", "eventbridge",
+      "stepfunctions", "glue", "athena", "lakeformation", "delta", "iceberg", "hudi", "parquet",
+      "avro", "orc", "json", "yaml", "xml", "csv", "graphql", "rest", "soap",
+      "cuda", "opencl", "opencv", "nltk", "spacy", "huggingface", "langchain", "llamaindex",
+      "pinecone", "weaviate", "chromadb", "milvus", "faiss", "xgboost", "lightgbm", "catboost",
+      "streaming", "batch", "pipeline", "pipelines", "workflow", "workflows", "orchestration",
+      "cdc", "elt", "etl", "cicd", "olap", "oltp", "bi", "kms", "cdn", "waf", "dns", "tcp", "udp",
+      "http", "https", "tcp/ip", "scikit", "sklearn"
+    ];
+
+    const TECH_KEYWORDS = new Set(EXTRA_TECH_KEYWORDS);
+    for (const sk of SKILLS) {
+      if (!sk.includes(" ")) {
+        TECH_KEYWORDS.add(sk);
+        TECH_KEYWORDS.add(sk.replace(/\//g, ""));
+      }
+    }
+
+    /** Generic job-posting English — not useful as "keywords". */
+    const JD_FILLER = new Set([
+      "the","a","an","and","or","to","of","in","for","on","with","is","are","as","by","at","from","that",
+      "this","it","be","will","your","you","we","our","their","they","has","have","had","was","were",
+      "been","being","do","does","did","can","could","should","would","may","might","must","shall",
+      "not","but","if","then","than","so","such","all","any","each","every","both","few","more","most",
+      "other","some","such","no","nor","too","very","just","also","only","own","same","into","through",
+      "during","before","after","above","below","between","under","again","further","once","here",
+      "there","when","where","why","how","what","which","who","whom","whose","about","against",
+      "among","until","while","within","without","across","along","around","toward","towards",
+      "via","per","amongst","via","etc","e.g","eg","ie","including","included","include","includes",
+      "including","related","relating","various","multiple","several","many","some","certain",
+      "strong","strongly","excellent","excellent","proven","proven","ability","abilities","able",
+      "responsible","responsibilities","responsibility","role","roles","position","team","teams",
+      "collaborate","collaboration","collaborating","partner","partners","stakeholder","stakeholders",
+      "support","supporting","supported","ensure","ensuring","ensures","ensured","maintain",
+      "maintaining","maintains","maintained","develop","developing","developed","develops","design",
+      "designing","designed","designs","build","building","built","builds","create","creating","created",
+      "creates","implement","implementing","implemented","implements","deliver","delivering","delivered",
+      "delivers","drive","driving","driven","drives","manage","managing","managed","manages","lead",
+      "leading","led","leads","work","working","worked","works","use","using","used","uses","utilize",
+      "utilizing","utilized","utilizes","apply","applying","applied","applies","perform","performing",
+      "performed","performs","process","processes","processing","processed","integrate","integrating",
+      "integrated","integrates","consistent","consistency","sources","batches","stream","streams",
+      "systems","system","platform","platforms","environment",
+      "environments","organization","organizations","company","companies","client","clients","customer",
+      "customers","business","businesses","product","products","service","services","solution","solutions",
+      "initiative","initiatives","project","projects","program","programs","effort","efforts","goal",
+      "goals","objective","objectives","outcome","outcomes","result","results","impact","impacts",
+      "success","successful","effectively","effectiveness","efficient","efficiency","quality","high",
+      "low","new","existing","current","prior","previous","next","first","last","best","better","good",
+      "great","key","primary","secondary","main","core","general","specific","overall","daily","weekly",
+      "annual","year","years","month","months","day","days","time","times","full","part","remote",
+      "hybrid","onsite","office","location","locations","based","basis","required","requirements",
+      "requirement","preferred","preference","plus","bonus","nice","ideal","looking","seeking","join",
+      "opportunity","opportunities","career","careers","equal","employer","disability","veteran",
+      "citizen","authorization","eligible","eligibility","degree","degrees","education","educational",
+      "bachelor","masters","master","phd","certification","certifications","certified","experience",
+      "experiences","minimum","maximum","least","less","greater","equal","equivalent","similar",
+      "related","relevant","field","fields","industry","industries","sector","sectors","access",
+      "accessible","accessing","accessed","across","among","ensure","ensuring","various","several",
+      "multiple","different","diverse","diversity","inclusive","inclusion","culture","values","mission",
+      "vision","growth","scale","scaling","scalable","global","international","national","local",
+      "travel","relocation","salary","compensation","benefits","package","hour","hours","week","weeks"
+    ]);
 
     const QUALIFICATIONS = [
       "bachelor", "master", "phd", "degree", "certification", "certified", "years of experience",
@@ -407,16 +509,74 @@
     function containsPhrase(text, phrase) {
       return text.includes(phrase.toLowerCase());
     }
-    function topKeywords(text, limit = 30) {
-      const words = (text.toLowerCase().match(/[a-z][a-z0-9.+-]*/g) || [])
-        .filter((w) => w.length > 2 && !STOPWORDS.has(w));
-      const counts = {};
-      for (const w of words) counts[w] = (counts[w] || 0) + 1;
-      return Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, limit)
-        .map(([w]) => w);
+
+    function normalizeAliases(text) {
+      let t = text.toLowerCase();
+      for (const [from, to] of SKILL_ALIASES) {
+        const esc = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        t = t.replace(new RegExp(esc, "g"), to);
+      }
+      return t;
     }
+
+    function expandAcronyms(jdRaw) {
+      const parts = [];
+      const rules = [
+        [/\bAWS\b/i, "aws"],
+        [/\bGCP\b/i, "gcp"],
+        [/\bSQL\b/i, "sql"],
+        [/\bETL\b/i, "etl"],
+        [/\bELT\b/i, "elt"],
+        [/\bML\b/i, "machine learning"],
+        [/\bDL\b/i, "deep learning"],
+        [/\bAI\b/i, "generative ai"],
+        [/\bNLP\b/i, "nlp"],
+        [/\bCI\s*\/\s*CD\b/i, "ci/cd"],
+        [/\bK8s?\b/i, "kubernetes"],
+        [/\bAPIs?\b/i, "api"],
+        [/\bS3\b/i, "s3"],
+        [/\bEC2\b/i, "ec2"],
+        [/\bVPC\b/i, "vpc"],
+        [/\bIAM\b/i, "iam"],
+        [/\bRDS\b/i, "postgresql"],
+        [/\bEKS\b/i, "kubernetes aws"],
+        [/\bGKE\b/i, "kubernetes gcp"],
+        [/\bAKS\b/i, "kubernetes azure"],
+        [/\bIaaS\b/i, "aws"],
+        [/\bPaaS\b/i, "azure"],
+        [/\bSaaS\b/i, "api"]
+      ];
+      for (const [re, term] of rules) {
+        if (re.test(jdRaw)) parts.push(term);
+      }
+      return parts.join(" ");
+    }
+
+    function resumeHasEducationSignal(text) {
+      return /\b(b\.?\s?s\.?|b\.?\s?a\.?|m\.?\s?s\.?|m\.?\s?a\.?|mba|ph\.?\s?d|bachelor|master'?s?|university|college|institute of technology)\b/i.test(text);
+    }
+
+    function missingTechKeywords(jdText, resumeText) {
+      const words = jdText.match(/\b[a-z][a-z0-9+#.-]{0,48}\b/g) || [];
+      const counts = {};
+      for (let w of words) {
+        w = w.toLowerCase();
+        if (w.length < 2) continue;
+        if (STOPWORDS.has(w) || JD_FILLER.has(w)) continue;
+        if (w.endsWith("ing") && w.length < 14 && !TECH_KEYWORDS.has(w)) continue;
+        counts[w] = (counts[w] || 0) + 1;
+      }
+      const scored = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const out = [];
+      for (const [w] of scored) {
+        if (!TECH_KEYWORDS.has(w)) continue;
+        if (containsPhrase(resumeText, w)) continue;
+        out.push(w);
+        if (out.length >= 22) break;
+      }
+      return uniq(out).slice(0, 15);
+    }
+
     function scrubPII(text) {
       return text
         .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[REDACTED_EMAIL]")
@@ -436,25 +596,27 @@
     }
 
     function analyze(resumeTextRaw, jdRaw) {
-      const resumeText = scrubPII(resumeTextRaw.toLowerCase());
-      const jdText = jdRaw.toLowerCase();
+      const resumeText = normalizeAliases(scrubPII(resumeTextRaw.toLowerCase()));
+      const jdText = normalizeAliases(`${jdRaw.toLowerCase()} ${expandAcronyms(jdRaw).toLowerCase()}`);
 
+      const skillsOrdered = [...SKILLS].sort((a, b) => b.length - a.length);
       const matchedSkills = [];
       const missingSkills = [];
-      for (const skill of SKILLS) {
+      for (const skill of skillsOrdered) {
         const inJD = containsPhrase(jdText, skill);
         const inResume = containsPhrase(resumeText, skill);
         if (inJD && inResume) matchedSkills.push(skill);
         if (inJD && !inResume) missingSkills.push(skill);
       }
 
-      const missingQualifications = QUALIFICATIONS
-        .filter((q) => containsPhrase(jdText, q) && !containsPhrase(resumeText, q));
+      const missingQualifications = [];
+      for (const q of QUALIFICATIONS) {
+        if (!containsPhrase(jdText, q)) continue;
+        if ((q === "degree" || q === "bachelor" || q === "master" || q === "phd") && resumeHasEducationSignal(resumeText)) continue;
+        if (!containsPhrase(resumeText, q)) missingQualifications.push(q);
+      }
 
-      const jdTop = topKeywords(jdText, 35);
-      const missingKeywords = jdTop
-        .filter((kw) => !containsPhrase(resumeText, kw))
-        .slice(0, 15);
+      const missingKeywords = missingTechKeywords(jdText, resumeText);
 
       const tips = uniq([
         missingSkills.length ? `Add project bullets showing ${missingSkills.slice(0, 3).join(", ")}.` : "",
